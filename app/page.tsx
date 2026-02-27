@@ -17,6 +17,11 @@ const WHEEL_ITEMS: WheelItem[] = [
   { name: "炸鸡", emoji: "🍗" },
   { name: "烤冷面", emoji: "🥞" },
   { name: "粥", emoji: "🥣" },
+  { name: "盐水鸭", emoji: "🦆" },
+  { name: "白斩鸡", emoji: "🐔" },
+  { name: "烤鱼", emoji: "🐟" },
+  { name: "炒饭", emoji: "🍚" },
+  { name: "东北菜", emoji: "🥬" },
 ];
 
 const SEGMENT_COLORS = [
@@ -29,10 +34,15 @@ const SEGMENT_COLORS = [
   "#EF4444",
   "#14B8A6",
   "#6366F1",
+  "#D946EF",
+  "#0EA5E9",
+  "#22C55E",
+  "#A855F7",
+  "#EAB308",
 ];
 
 const SEGMENT_ANGLE = 360 / WHEEL_ITEMS.length;
-const LABEL_RADIUS = 104;
+const LABEL_RADIUS = 128;
 
 export default function Home() {
   const [rotation, setRotation] = useState(0);
@@ -118,9 +128,9 @@ export default function Home() {
               return (
                 <div
                   key={item.name}
-                  className="absolute left-1/2 top-1/2 flex w-16 -translate-x-1/2 -translate-y-1/2 flex-col items-center text-center text-xs font-semibold leading-tight text-white drop-shadow md:w-20 md:text-sm"
+                  className="absolute left-1/2 top-1/2 flex w-14 -translate-x-1/2 -translate-y-1/2 flex-col items-center text-center text-[11px] font-semibold leading-tight text-white drop-shadow md:w-16 md:text-xs"
                   style={{
-                    transform: `rotate(${angle}deg) translateY(-${LABEL_RADIUS}px) rotate(${-angle}deg)`,
+                    transform: `rotate(${angle}deg) translateY(-${LABEL_RADIUS}px)`,
                     transformOrigin: "center center",
                   }}
                 >
