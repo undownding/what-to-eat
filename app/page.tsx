@@ -43,6 +43,34 @@ const SEGMENT_COLORS = [
 
 const SEGMENT_ANGLE = 360 / WHEEL_ITEMS.length;
 const LABEL_RADIUS = 128;
+const DURATION = 4000;
+
+// cubic-bezier(0.18, 0.88, 0.3, 1)
+function cubicBezier(t: number): number {
+  const x1 = 0.18, y1 = 0.88;
+  const x2 = 0.3, y2 = 1;
+
+  // 使用 Newton-Raphson 方法求解 x(t) = target 对应的 t
+  function findTForX(target: number): number {
+    let t = target;
+    for (let i = 0; i < 8; i++) {
+      const x = 3 * t * (1 - t) * (1 - t) * x1 + 3 * t * t * (1 - t) * x2 + t * t * t;
+      const dx = 3 * (1 - t) * (1 - t) * x1 + 6 * t * (1 - t) * (x2 - x1) + 3 * t * t * (1 - x2);
+      if (Math.abs(x - target) < 1e-6) break;
+      t -= (x - target) / dx;
+    }
+    return t;
+  }
+
+  const tNorm = findTForX(t);
+  return 3 * tNorm * (1 - tNorm) * (1 - tNorm) * y1 + 3 * tNorm * tNorm * (1 - tNorm) * y2 + tNorm * tNorm * tNorm;
+}
+
+function getCurrentItemFromRotation(totalRotation: number): WheelItem {
+  const normalizedRotation = (360 - (totalRotation % 360) + 360) % 360;
+  const index = Math.floor(normalizedRotation / SEGMENT_ANGLE) % WHEEL_ITEMS.length;
+  return WHEEL_ITEMS[index];
+}
 
 export default function Home() {
   const [rotation, setRotation] = useState(0);
@@ -51,16 +79,18 @@ export default function Home() {
   const [drawCount, setDrawCount] = useState(0);
   const [resultPulseKey, setResultPulseKey] = useState(0);
 
-  const finishTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const rollingTextRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const animationRef = useRef<{
+    startRotation: number;
+    targetRotation: number;
+    startTime: number;
+    selectedItem: WheelItem;
+  } | null>(null);
+  const rafRef = useRef<number | null>(null);
 
   useEffect(() => {
     return () => {
-      if (finishTimerRef.current) {
-        clearTimeout(finishTimerRef.current);
-      }
-      if (rollingTextRef.current) {
-        clearInterval(rollingTextRef.current);
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
       }
     };
   }, []);
@@ -70,6 +100,34 @@ export default function Home() {
     const end = start + SEGMENT_ANGLE;
     return `${SEGMENT_COLORS[index]} ${start}deg ${end}deg`;
   }).join(", ");
+
+  const animate = () => {
+    if (!animationRef.current) return;
+
+    const { startRotation, targetRotation, startTime, selectedItem } = animationRef.current;
+    const now = performance.now();
+    const elapsed = now - startTime;
+
+    if (elapsed >= DURATION) {
+      setRotation(targetRotation);
+      setCurrentItem(selectedItem);
+      setIsSpinning(false);
+      setDrawCount((count) => count + 1);
+      setResultPulseKey((key) => key + 1);
+      animationRef.current = null;
+      rafRef.current = null;
+      return;
+    }
+
+    const t = elapsed / DURATION;
+    const progress = cubicBezier(t);
+    const currentRotation = startRotation + (targetRotation - startRotation) * progress;
+
+    setRotation(currentRotation);
+    setCurrentItem(getCurrentItemFromRotation(currentRotation));
+
+    rafRef.current = requestAnimationFrame(animate);
+  };
 
   const handleDraw = () => {
     if (isSpinning || drawCount >= 3) {
@@ -85,24 +143,15 @@ export default function Home() {
       minTarget + ((targetNormalized - (minTarget % 360) + 360) % 360);
 
     setIsSpinning(true);
-    setCurrentItem(WHEEL_ITEMS[Math.floor(Math.random() * WHEEL_ITEMS.length)]);
 
-    rollingTextRef.current = setInterval(() => {
-      setCurrentItem(WHEEL_ITEMS[Math.floor(Math.random() * WHEEL_ITEMS.length)]);
-    }, 120);
+    animationRef.current = {
+      startRotation: rotation,
+      targetRotation,
+      startTime: performance.now(),
+      selectedItem,
+    };
 
-    setRotation(targetRotation);
-
-    finishTimerRef.current = setTimeout(() => {
-      if (rollingTextRef.current) {
-        clearInterval(rollingTextRef.current);
-        rollingTextRef.current = null;
-      }
-      setCurrentItem(selectedItem);
-      setIsSpinning(false);
-      setDrawCount((count) => count + 1);
-      setResultPulseKey((key) => key + 1);
-    }, 4000);
+    rafRef.current = requestAnimationFrame(animate);
   };
 
   return (
@@ -118,9 +167,7 @@ export default function Home() {
             style={{
               background: `conic-gradient(${gradientStops})`,
               transform: `rotate(${rotation}deg)`,
-              transition: isSpinning
-                ? "transform 4s cubic-bezier(0.18, 0.88, 0.3, 1)"
-                : "none",
+              transition: "none",
             }}
           >
             {WHEEL_ITEMS.map((item, index) => {
