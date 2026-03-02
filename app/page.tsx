@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import confetti from "canvas-confetti";
 
 type WheelItem = {
   name: string;
@@ -44,6 +45,36 @@ const SEGMENT_COLORS = [
 const SEGMENT_ANGLE = 360 / WHEEL_ITEMS.length;
 const LABEL_RADIUS = 128;
 const DURATION = 4000;
+
+function fireConfetti() {
+  const duration = 3000;
+  const animationEnd = Date.now() + duration;
+  const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
+
+  function randomInRange(min: number, max: number) {
+    return Math.random() * (max - min) + min;
+  }
+
+  const interval: any = setInterval(function() {
+    const timeLeft = animationEnd - Date.now();
+
+    if (timeLeft <= 0) {
+      return clearInterval(interval);
+    }
+
+    const particleCount = 50 * (timeLeft / duration);
+    confetti({
+      ...defaults,
+      particleCount,
+      origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 }
+    });
+    confetti({
+      ...defaults,
+      particleCount,
+      origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 }
+    });
+  }, 250);
+}
 
 // cubic-bezier(0.18, 0.88, 0.3, 1)
 function cubicBezier(t: number): number {
@@ -114,6 +145,7 @@ export default function Home() {
       setIsSpinning(false);
       setDrawCount((count) => count + 1);
       setResultPulseKey((key) => key + 1);
+      fireConfetti();
       animationRef.current = null;
       rafRef.current = null;
       return;
@@ -199,8 +231,11 @@ export default function Home() {
               !isSpinning ? "result-pop-highlight" : ""
             }`}
           >
-            {isSpinning ? "正在抽：" : "结果是："}
-            {currentItem.emoji} {currentItem.name}
+            {isSpinning ? (
+              <>正在抽：{currentItem.emoji} {currentItem.name}</>
+            ) : (
+              <>结果是：{currentItem.emoji} {currentItem.name}</>
+            )}
           </p>
         ) : (
           <p className="text-zinc-500">准备好抽一发，看看今天吃啥</p>
